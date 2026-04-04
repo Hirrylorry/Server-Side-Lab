@@ -15,14 +15,13 @@ java {
 }
 
 repositories {
-    maven {
-        url = uri('https://maven.aliyun.com/repository/public')
-    }
     mavenCentral()
 }
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.12'
+    runtimeOnly 'org.postgresql:postgresql'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

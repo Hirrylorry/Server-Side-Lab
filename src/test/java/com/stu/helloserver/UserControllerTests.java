@@ -6,11 +6,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,101 +21,157 @@ class UserControllerTests {
     private MockMvc mockMvc;
 
     @Test
-    void shouldGetUserById() throws Exception {
-        mockMvc.perform(get("/api/users/1001"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.msg").value("操作成功"))
-                .andExpect(jsonPath("$.data.id").value(1001))
-                .andExpect(jsonPath("$.data.name").value("用户1001"));
-    }
-
-    @Test
-    void shouldCreateUser() throws Exception {
+    void shouldRegisterUser() throws Exception {
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "name": "张三",
-                                  "age": 21
+                                  "username": "admin_register",
+                                  "password": "123"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.msg").value("操作成功"))
-                .andExpect(jsonPath("$.data.id").value(1001))
-                .andExpect(jsonPath("$.data.name").value("张三"))
-                .andExpect(jsonPath("$.data.age").value(21));
+                .andExpect(jsonPath("$.data").value("注册成功"));
     }
 
     @Test
-    void shouldRejectUpdateUserWithoutToken() throws Exception {
-        mockMvc.perform(put("/api/users/1002")
+    void shouldRejectDuplicateUserRegistration() throws Exception {
+        mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "name": "李四",
-                                  "age": 22
+                                  "username": "admin_duplicate",
+                                  "password": "123"
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401))
-                .andExpect(jsonPath("$.msg").value("非法操作，敏感动作 [PUT] 必须携带有效 Token"))
-                .andExpect(jsonPath("$.data").doesNotExist());
-    }
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data").value("注册成功"));
 
-    @Test
-    void shouldUpdateUserWithToken() throws Exception {
-        mockMvc.perform(put("/api/users/1002")
-                        .header("Authorization", "mock-token")
+        mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "name": "李四",
-                                  "age": 22
+                                  "username": "admin_duplicate",
+                                  "password": "123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(4001))
+                .andExpect(jsonPath("$.msg").value("该用户名已被注册"));
+    }
+
+    @Test
+    void shouldLoginSuccessfully() throws Exception {
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "admin_login",
+                                  "password": "123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "admin_login",
+                                  "password": "123"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.msg").value("操作成功"))
-                .andExpect(jsonPath("$.data.id").value(1002))
-                .andExpect(jsonPath("$.data.name").value("李四"));
+                .andExpect(jsonPath("$.data").isString());
     }
 
     @Test
-    void shouldRejectDeleteUserWithoutToken() throws Exception {
-        mockMvc.perform(delete("/api/users/1003"))
+    void shouldRejectLoginWhenUserNotExist() throws Exception {
+        mockMvc.perform(post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "not_exist_user",
+                                  "password": "123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(4002))
+                .andExpect(jsonPath("$.msg").value("该用户不存在"));
+    }
+
+    @Test
+    void shouldRejectLoginWhenPasswordError() throws Exception {
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "admin_password",
+                                  "password": "123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "admin_password",
+                                  "password": "456"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(4003))
+                .andExpect(jsonPath("$.msg").value("账号或密码错误"));
+    }
+
+    @Test
+    void shouldRejectProtectedApiWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/users/1001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(401))
-                .andExpect(jsonPath("$.msg").value("非法操作，敏感动作 [DELETE] 必须携带有效 Token"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+                .andExpect(jsonPath("$.msg").value("未登录或Token无效"));
     }
 
     @Test
-    void shouldDeleteUserWithToken() throws Exception {
-        mockMvc.perform(delete("/api/users/1003")
-                        .header("Authorization", "mock-token"))
+    void shouldAccessProtectedApiWithTokenFromLogin() throws Exception {
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "admin_token",
+                                  "password": "123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        MvcResult loginResult = mockMvc.perform(post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "admin_token",
+                                  "password": "123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+
+        String response = loginResult.getResponse().getContentAsString();
+        String token = response.replaceAll(".*\"data\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(get("/api/users/1001")
+                        .header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.msg").value("操作成功"))
-                .andExpect(jsonPath("$.data").value("已移除 ID 为 1003 的用户"));
-    }
-
-    @Test
-    void shouldLoginWithoutToken() throws Exception {
-        mockMvc.perform(post("/api/users/login"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.msg").value("操作成功"))
-                .andExpect(jsonPath("$.data").value("mock-token"));
-    }
-
-    @Test
-    void shouldHandleExceptionAsJson() throws Exception {
-        mockMvc.perform(get("/api/users/0"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("系统繁忙，请稍后再试"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+                .andExpect(jsonPath("$.data").value("查询成功，正在返回 ID 为 1001 的用户信息"));
     }
 }
