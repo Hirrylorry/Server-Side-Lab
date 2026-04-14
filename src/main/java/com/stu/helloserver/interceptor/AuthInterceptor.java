@@ -24,6 +24,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             response.getWriter().write("{\"code\":401,\"msg\":\"未登录或Token无效\",\"data\":null}");
             return false;
         }
+        if (!token.startsWith("Bearer ")) {
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"code\":401,\"msg\":\"未登录或Token无效\",\"data\":null}");
+            return false;
+        }
 
         return true;
     }

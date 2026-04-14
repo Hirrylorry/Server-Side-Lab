@@ -3,33 +3,47 @@ package com.stu.helloserver.service.impl;
 import com.stu.helloserver.common.Result;
 import com.stu.helloserver.common.ResultCode;
 import com.stu.helloserver.dto.UserDTO;
+import com.stu.helloserver.entity.User;
+import com.stu.helloserver.mapper.UserMapper;
 import com.stu.helloserver.service.UserService;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserServiceImpl implements UserService {
 
-    private final Map<String, String> userDb = new ConcurrentHashMap<>();
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public Result<String> register(UserDTO userDTO) {
-        if (userDb.containsKey(userDTO.getUsername())) {
+        User existUser = userMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>()
+                        .eq("username", userDTO.getUsername())
+                        .last("limit 1")
+        );
+        if (existUser != null) {
             return Result.error(ResultCode.USER_HAS_EXISTED);
         }
-        userDb.put(userDTO.getUsername(), userDTO.getPassword());
+        User user = new User();
+        user.setUsername(userDTO.getUsername());
+        user.setPassword(userDTO.getPassword());
+        userMapper.insert(user);
         return Result.success("注册成功");
     }
 
     @Override
     public Result<String> login(UserDTO userDTO) {
-        if (!userDb.containsKey(userDTO.getUsername())) {
+        User dbUser = userMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>()
+                        .eq("username", userDTO.getUsername())
+                        .last("limit 1")
+        );
+        if (dbUser == null) {
             return Result.error(ResultCode.USER_NOT_EXIST);
         }
-        String dbPassword = userDb.get(userDTO.getUsername());
-        if (!dbPassword.equals(userDTO.getPassword())) {
+        if (!dbUser.getPassword().equals(userDTO.getPassword())) {
             return Result.error(ResultCode.PASSWORD_ERROR);
         }
         return Result.success("Bearer " + UUID.randomUUID());

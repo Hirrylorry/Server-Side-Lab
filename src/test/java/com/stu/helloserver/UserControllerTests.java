@@ -20,16 +20,21 @@ class UserControllerTests {
     @Autowired
     private MockMvc mockMvc;
 
+    private String uniqueUsername(String prefix) {
+        return prefix + "_" + System.nanoTime();
+    }
+
     @Test
     void shouldRegisterUser() throws Exception {
+        String username = uniqueUsername("admin_register");
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_register",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.msg").value("操作成功"))
@@ -38,14 +43,15 @@ class UserControllerTests {
 
     @Test
     void shouldRejectDuplicateUserRegistration() throws Exception {
+        String username = uniqueUsername("admin_duplicate");
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_duplicate",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data").value("注册成功"));
@@ -54,10 +60,10 @@ class UserControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_duplicate",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(4001))
                 .andExpect(jsonPath("$.msg").value("该用户名已被注册"));
@@ -65,14 +71,15 @@ class UserControllerTests {
 
     @Test
     void shouldLoginSuccessfully() throws Exception {
+        String username = uniqueUsername("admin_login");
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_login",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -80,10 +87,10 @@ class UserControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_login",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.msg").value("操作成功"))
@@ -107,14 +114,15 @@ class UserControllerTests {
 
     @Test
     void shouldRejectLoginWhenPasswordError() throws Exception {
+        String username = uniqueUsername("admin_password");
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_password",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -122,10 +130,10 @@ class UserControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_password",
+                                  "username": "%s",
                                   "password": "456"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(4003))
                 .andExpect(jsonPath("$.msg").value("账号或密码错误"));
@@ -140,15 +148,25 @@ class UserControllerTests {
     }
 
     @Test
+    void shouldRejectProtectedApiWithInvalidTokenPrefix() throws Exception {
+        mockMvc.perform(get("/api/users/1001")
+                        .header("Authorization", "Token abcdefg"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(jsonPath("$.msg").value("未登录或Token无效"));
+    }
+
+    @Test
     void shouldAccessProtectedApiWithTokenFromLogin() throws Exception {
+        String username = uniqueUsername("admin_token");
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_token",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -156,10 +174,10 @@ class UserControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "admin_token",
+                                  "username": "%s",
                                   "password": "123"
                                 }
-                                """))
+                                """.formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andReturn();
