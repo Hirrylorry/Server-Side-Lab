@@ -3,3 +3,11 @@ CREATE TABLE IF NOT EXISTS sys_user (
     username VARCHAR(64) NOT NULL UNIQUE,
     password VARCHAR(128) NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS user_info (
+    id SERIAL PRIMARY KEY,
+    real_name VARCHAR(50),
+    phone VARCHAR(20),
+    address VARCHAR(200),
+    user_id BIGINT NOT NULL UNIQUE
+);

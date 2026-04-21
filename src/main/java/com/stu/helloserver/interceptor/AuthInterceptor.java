@@ -13,8 +13,9 @@ public class AuthInterceptor implements HandlerInterceptor {
         String uri = request.getRequestURI();
         boolean isRegister = "POST".equalsIgnoreCase(method) && "/api/users".equals(uri);
         boolean isLogin = "POST".equalsIgnoreCase(method) && "/api/users/login".equals(uri);
+        boolean isPageQuery = "GET".equalsIgnoreCase(method) && "/api/users/page".equals(uri);
 
-        if (isRegister || isLogin) {
+        if (isRegister || isLogin || isPageQuery) {
             return true;
         }
 

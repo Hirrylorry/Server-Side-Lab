@@ -192,4 +192,18 @@ class UserControllerTests {
                 .andExpect(jsonPath("$.msg").value("操作成功"))
                 .andExpect(jsonPath("$.data").value("查询成功，正在返回 ID 为 1001 的用户信息"));
     }
+
+    @Test
+    void shouldReturnPagedUsers() throws Exception {
+        mockMvc.perform(get("/api/users/page")
+                        .param("pageNum", "1")
+                        .param("pageSize", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.msg").value("操作成功"))
+                .andExpect(jsonPath("$.data.records").isArray())
+                .andExpect(jsonPath("$.data.records.length()").value(2))
+                .andExpect(jsonPath("$.data.total").isNumber())
+                .andExpect(jsonPath("$.data.current").value(1));
+    }
 }
